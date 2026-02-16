@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StoxAI Dashboard</title>
+    <link rel="icon" type="image/png" href="/static/ico.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .pulse-animation {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .slide-up {
+            animation: slideUp 0.5s ease-out;
+        }
+
+        .gradient-border {
+            position: relative;
+            background: linear-gradient(white, white) padding-box,
+                linear-gradient(135deg, #667eea 0%, #764ba2 100%) border-box;
+            border: 2px solid transparent;
+        }
+    </style>
+</head>
+
+<body class="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-7xl">
+        <!-- Header -->
+        <div class="text-center mb-8 slide-up">
+            <h1
+                class="text-5xl font-bold bg-gradient-to-r from-blue-500 to-teal-400 bg-clip-text text-transparent mb-3">
+                StoxAI
+            </h1>
+            <p class="text-gray-600 text-lg">Advanced LSTM + News Sentiment Analysis</p>
+        </div>
+
+        <!-- Input Section -->
+        <div class="bg-white rounded-2xl shadow-2xl p-8 mb-8 slide-up gradient-border">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        <i class="fas fa-key mr-2"></i>OpenRouter API Key
+                        <a href="https://openrouter.ai/settings/keys" target="_blank"
+                            class="text-xs text-blue-600 hover:underline ml-1">(CLICK TO GET IT)</a>
+                    </label>
+                    <input type="password" id="openrouterKey" placeholder="sk-or-..."
+                        class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all font-mono text-sm" />
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        <i class="fas fa-key mr-2"></i>NewsOrg API Key
+                        <a href="https://newsapi.org/" target="_blank"
+                            class="text-xs text-blue-600 hover:underline ml-1">(CLICK TO GET IT)</a>
+                    </label>
+                    <input type="password" id="newsorgKey" placeholder="Detailed key..."
+                        class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all font-mono text-sm" />
+                </div>
+            </div>
+
+            <div class="flex flex-col md:flex-row gap-4 items-end">
+                <div class="flex-1 relative"> <!-- Wrapper for positioning -->
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        <i class="fas fa-search mr-2"></i>Stock Search
+                    </label>
+                    <input type="text" id="symbolInput" placeholder="Start typing (e.g., RELIANCE, TCS)..."
+                        class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all uppercase"
+                        autocomplete="off" />
+                    <!-- Suggestions List -->
+                    <ul id="suggestionsList"
+                        class="absolute z-50 w-full bg-white border border-gray-200 rounded-lg shadow-lg mt-1 hidden max-h-60 overflow-y-auto">
+                        <!-- Items will be injected here -->
+                    </ul>
+                </div>
+                <button id="analyzeBtn"
+                    class="px-8 py-3 bg-gradient-to-r from-blue-500 to-teal-400 text-white font-semibold rounded-xl hover:from-blue-600 hover:to-teal-500 transform hover:scale-105 transition-all duration-200 shadow-lg">
+                    <i class="fas fa-rocket mr-2"></i>Run Analysis
+                </button>
+            </div>
+        </div>
+
+        <!-- Progress Steps -->
+        <div id="progressSection" class="bg-white rounded-2xl shadow-2xl p-8 mb-8 hidden slide-up">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">
+                <i class="fas fa-tasks mr-2 text-blue-600"></i>Analysis Progress
+            </h2>
+            <div class="flex justify-between items-center">
+                <div id="step1" class="flex flex-col items-center flex-1">
+                    <div class="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center mb-2">
+                        <i class="fas fa-server text-2xl text-gray-400"></i>
+                    </div>
+                    <span class="text-sm font-medium text-gray-500">API Server</span>
+                </div>
+                <div class="flex-1 h-1 bg-gray-200 mx-2"></div>
+                <div id="step2" class="flex flex-col items-center flex-1">
+                    <div class="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center mb-2">
+                        <i class="fas fa-brain text-2xl text-gray-400"></i>
+                    </div>
+                    <span class="text-sm font-medium text-gray-500">Technical</span>
+                </div>
+                <div class="flex-1 h-1 bg-gray-200 mx-2"></div>
+                <div id="step3" class="flex flex-col items-center flex-1">
+                    <div class="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center mb-2">
+                        <i class="fas fa-newspaper text-2xl text-gray-400"></i>
+                    </div>
+                    <span class="text-sm font-medium text-gray-500">News</span>
+                </div>
+                <div class="flex-1 h-1 bg-gray-200 mx-2"></div>
+                <div id="step4" class="flex flex-col items-center flex-1">
+                    <div class="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center mb-2">
+                        <i class="fas fa-bullseye text-2xl text-gray-400"></i>
+                    </div>
+                    <span class="text-sm font-medium text-gray-500">Prediction</span>
+                </div>
+            </div>
+
+            <!-- Progress Bar -->
+            <div id="progressBarContainer" class="mt-8 hidden">
+                <div class="flex justify-between text-sm mb-2">
+                    <span id="progressMessage" class="font-medium text-gray-600">Initializing...</span>
+                    <span id="progressPercent" class="font-bold text-blue-600">0%</span>
+                </div>
+                <div class="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
+                    <div id="progressBar"
+                        class="bg-gradient-to-r from-blue-500 to-indigo-600 h-full rounded-full transition-all duration-300 ease-out"
+                        style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div id="resultsSection" class="hidden">
+            <!-- Current Price Card -->
+            <div
+                class="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl shadow-2xl p-8 text-white mb-6 slide-up">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <p class="text-blue-100 mb-2">Current Price - <span id="symbolDisplay"></span></p>
+                        <p class="text-6xl font-bold mb-2">₹<span id="currentPrice">0.00</span></p>
+                        <p class="text-blue-100 text-sm" id="analysisTime"></p>
+                    </div>
+                    <i class="fas fa-dollar-sign text-8xl text-blue-300 opacity-30"></i>
+                </div>
+            </div>
+
+            <!-- Recommendation Card -->
+            <div id="recommendationCard" class="rounded-2xl shadow-2xl p-8 mb-6 slide-up">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <p class="text-sm font-medium text-gray-600 mb-2">Investment Recommendation</p>
+                        <p id="recommendation" class="text-5xl font-bold"></p>
+                        <p class="text-sm text-gray-600 mt-2">Based on combined technical and sentiment analysis</p>
+                    </div>
+                    <i class="fas fa-bullseye text-7xl opacity-20"></i>
+                </div>
+            </div>
+
+            <!-- Predictions Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                <!-- 1-Day Card -->
+                <div class="bg-white rounded-2xl shadow-2xl p-6 slide-up">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold text-gray-800">1-Day Forecast</h3>
+                        <i class="fas fa-clock text-gray-400"></i>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="bg-purple-50 rounded-xl p-4">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-sm font-medium text-purple-700">LSTM</span>
+                                <i class="fas fa-brain text-purple-600"></i>
+                            </div>
+                            <p class="text-2xl font-bold text-purple-900">₹<span id="tech1Price">0.00</span></p>
+                            <p id="tech1Change" class="text-xs font-medium"></p>
+                        </div>
+                        <div class="bg-blue-50 rounded-xl p-4">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-sm font-medium text-blue-700">News</span>
+                                <i class="fas fa-newspaper text-blue-600"></i>
+                            </div>
+                            <p class="text-2xl font-bold text-blue-900">₹<span id="news1Price">0.00</span></p>
+                            <p id="news1Change" class="text-xs font-medium"></p>
+                        </div>
+                        <div id="final1Card" class="rounded-xl p-4">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-sm font-medium text-gray-700">Final</span>
+                                <i class="fas fa-bullseye text-gray-600"></i>
+                            </div>
+                            <p id="final1Price" class="text-3xl font-bold"></p>
+                            <p id="final1Change" class="text-base font-bold flex items-center mt-1"></p>
+                            <div class="mt-2 pt-2 border-t border-gray-200">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-xs text-gray-600">Conf.</span>
+                                    <span id="confidence1" class="text-xs font-bold text-gray-700">0%</span>
+                                </div>
+                                <div class="w-full h-1.5 bg-gray-200 rounded-full mt-1">
+                                    <div id="confidence1Bar" class="h-1.5 rounded-full"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 7-Day Card -->
+                <div class="bg-white rounded-2xl shadow-2xl p-6 slide-up" style="animation-delay: 0.1s">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold text-gray-800">7-Day Forecast</h3>
+                        <i class="fas fa-calendar-week text-gray-400"></i>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="bg-purple-50 rounded-xl p-4">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-sm font-medium text-purple-700">LSTM</span>
+                                <i class="fas fa-brain text-purple-600"></i>
+                            </div>
+                            <p class="text-2xl font-bold text-purple-900">₹<span id="tech7Price">0.00</span></p>
+                            <p id="tech7Change" class="text-xs font-medium"></p>
+                        </div>
+                        <div class="bg-blue-50 rounded-xl p-4">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-sm font-medium text-blue-700">News</span>
+                                <i class="fas fa-newspaper text-blue-600"></i>
+                            </div>
+                            <p class="text-2xl font-bold text-blue-900">₹<span id="news7Price">0.00</span></p>
+                            <p id="news7Change" class="text-xs font-medium"></p>
+                        </div>
+                        <div id="final7Card" class="rounded-xl p-4">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-sm font-medium text-gray-700">Final</span>
+                                <i class="fas fa-bullseye text-gray-600"></i>
+                            </div>
+                            <p id="final7Price" class="text-3xl font-bold"></p>
+                            <p id="final7Change" class="text-base font-bold flex items-center mt-1"></p>
+                            <div class="mt-2 pt-2 border-t border-gray-200">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-xs text-gray-600">Conf.</span>
+                                    <span id="confidence7" class="text-xs font-bold text-gray-700">0%</span>
+                                </div>
+                                <div class="w-full h-1.5 bg-gray-200 rounded-full mt-1">
+                                    <div id="confidence7Bar" class="h-1.5 rounded-full"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 30-Day Card -->
+                <div class="bg-white rounded-2xl shadow-2xl p-6 slide-up" style="animation-delay: 0.2s">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold text-gray-800">30-Day Forecast</h3>
+                        <i class="fas fa-calendar-alt text-gray-400"></i>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="bg-purple-50 rounded-xl p-4">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-sm font-medium text-purple-700">LSTM</span>
+                                <i class="fas fa-brain text-purple-600"></i>
+                            </div>
+                            <p class="text-2xl font-bold text-purple-900">₹<span id="tech30Price">0.00</span></p>
+                            <p id="tech30Change" class="text-xs font-medium"></p>
+                        </div>
+                        <div class="bg-blue-50 rounded-xl p-4">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-sm font-medium text-blue-700">News</span>
+                                <i class="fas fa-newspaper text-blue-600"></i>
+                            </div>
+                            <p class="text-2xl font-bold text-blue-900">₹<span id="news30Price">0.00</span></p>
+                            <p id="news30Change" class="text-xs font-medium"></p>
+                        </div>
+                        <div id="final30Card" class="rounded-xl p-4">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-sm font-medium text-gray-700">Final</span>
+                                <i class="fas fa-bullseye text-gray-600"></i>
+                            </div>
+                            <p id="final30Price" class="text-3xl font-bold"></p>
+                            <p id="final30Change" class="text-base font-bold flex items-center mt-1"></p>
+                            <div class="mt-2 pt-2 border-t border-gray-200">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-xs text-gray-600">Conf.</span>
+                                    <span id="confidence30" class="text-xs font-bold text-gray-700">0%</span>
+                                </div>
+                                <div class="w-full h-1.5 bg-gray-200 rounded-full mt-1">
+                                    <div id="confidence30Bar" class="h-1.5 rounded-full"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 6-Month Card -->
+                <div class="bg-white rounded-2xl shadow-2xl p-6 slide-up" style="animation-delay: 0.3s">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold text-gray-800">6-Month Forecast</h3>
+                        <i class="fas fa-chart-line text-gray-400"></i>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="bg-purple-50 rounded-xl p-4">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-sm font-medium text-purple-700">LSTM</span>
+                                <i class="fas fa-brain text-purple-600"></i>
+                            </div>
+                            <p class="text-2xl font-bold text-purple-900">₹<span id="tech6mPrice">0.00</span></p>
+                            <p id="tech6mChange" class="text-xs font-medium"></p>
+                        </div>
+                        <div class="bg-blue-50 rounded-xl p-4">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-sm font-medium text-blue-700">News</span>
+                                <i class="fas fa-newspaper text-blue-600"></i>
+                            </div>
+                            <p class="text-2xl font-bold text-blue-900">₹<span id="news6mPrice">0.00</span></p>
+                            <p id="news6mChange" class="text-xs font-medium"></p>
+                        </div>
+                        <div id="final6mCard" class="rounded-xl p-4">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-sm font-medium text-gray-700">Final</span>
+                                <i class="fas fa-bullseye text-gray-600"></i>
+                            </div>
+                            <p id="final6mPrice" class="text-3xl font-bold"></p>
+                            <p id="final6mChange" class="text-base font-bold flex items-center mt-1"></p>
+                            <div class="mt-2 pt-2 border-t border-gray-200">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-xs text-gray-600">Conf.</span>
+                                    <span id="confidence6m" class="text-xs font-bold text-gray-700">0%</span>
+                                </div>
+                                <div class="w-full h-1.5 bg-gray-200 rounded-full mt-1">
+                                    <div id="confidence6mBar" class="h-1.5 rounded-full"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- News Impact -->
+            <div class="bg-white rounded-2xl shadow-2xl p-8 mb-6 slide-up">
+                <h3 class="text-xl font-bold text-gray-800 mb-6">
+                    <i class="fas fa-chart-bar mr-2 text-blue-600"></i>News Impact Breakdown
+                </h3>
+                <div class="space-y-4">
+                    <div>
+                        <div class="flex justify-between text-sm mb-2">
+                            <span class="font-medium text-gray-700">Sentiment Impact</span>
+                            <span id="sentimentImpact" class="font-bold"></span>
+                        </div>
+                        <div class="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
+                            <div id="sentimentBar" class="h-full bg-gradient-to-r from-blue-400 to-blue-600"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-sm mb-2">
+                            <span class="font-medium text-gray-700">Market & Sector</span>
+                            <span id="marketImpact" class="font-bold"></span>
+                        </div>
+                        <div class="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
+                            <div id="marketBar" class="h-full bg-gradient-to-r from-purple-400 to-purple-600"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-sm mb-2">
+                            <span class="font-medium text-gray-700">Events & Volatility</span>
+                            <span id="eventsImpact" class="font-bold"></span>
+                        </div>
+                        <div class="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
+                            <div id="eventsBar" class="h-full bg-gradient-to-r from-indigo-400 to-indigo-600"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Disclaimer -->
+            <div class="bg-yellow-50 border-2 border-yellow-200 rounded-2xl p-6 slide-up mb-12">
+                <div class="flex gap-4">
+                    <i class="fas fa-exclamation-triangle text-yellow-600 text-2xl mt-1"></i>
+                    <div>
+                        <p class="font-bold text-yellow-900 mb-2 text-lg">Disclaimer</p>
+                        <p class="text-yellow-800">
+                            This prediction is for educational purposes only and not financial advice.
+                            Stock markets are volatile and past performance doesn't guarantee future results.
+                            Always do your own research and consult with financial advisors before investing.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div> <!-- Close resultsSection here -->
+
+        <!-- App Info & Creator Footer -->
+        <footer class="slide-up mt-16 border-t border-gray-200 pt-12 pb-8">
+            <div class="grid md:grid-cols-2 gap-12 items-center">
+
+                <!-- About The App -->
+                <div class="text-left space-y-4">
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-500">
+                            <i class="fas fa-robot text-xl"></i>
+                        </div>
+                        <h3
+                            class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-teal-400">
+                            About This AI</h3>
+                    </div>
+                    <p class="text-gray-600 leading-relaxed">
+                        This application combines <strong>Deep Learning (LSTM)</strong> for technical price patterns
+                        with <strong>Natural Language Processing (NLP)</strong> for news sentiment analysis.
+                    </p>
+                    <ul class="space-y-2 text-gray-600">
+                        <li class="flex items-center gap-2">
+                            <i class="fas fa-check-circle text-teal-400 text-sm"></i>
+                            <span>Real-time market data analysis</span>
+                        </li>
+                        <li class="flex items-center gap-2">
+                            <i class="fas fa-check-circle text-teal-400 text-sm"></i>
+                            <span>Multi-timeframe forecasting (1D to 6M)</span>
+                        </li>
+                        <li class="flex items-center gap-2">
+                            <i class="fas fa-check-circle text-teal-400 text-sm"></i>
+                            <span>Sentiment scoring from global news</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Created By Hindav -->
+                <div
+                    class="bg-gradient-to-br from-white to-gray-50 border border-gray-100 shadow-xl rounded-3xl p-8 text-center transform hover:scale-[1.02] transition-transform duration-300">
+                    <p class="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">Created By</p>
+                    <h2 class="text-3xl font-bold mb-3 flex items-center justify-center gap-3">
+                        <a href="https://hindav.vercel.app/" target="_blank"
+                            class="flex items-center gap-3 text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-teal-400 hover:to-teal-500 transition-all cursor-pointer">
+                            <img src="/static/ico.png" class="w-10 h-10 rounded-full shadow-sm" alt="Logo">
+                            Hindav
+                        </a>
+                    </h2>
+                    <p class="text-gray-500 font-medium text-lg mb-6">Solo Developer & AI Enthusiast</p>
+
+                    <div class="flex justify-center gap-3 flex-wrap">
+                        <a href="https://www.linkedin.com/in/hindav/" target="_blank"
+                            class="w-10 h-10 flex items-center justify-center bg-[#0077b5]/10 text-[#0077b5] rounded-full hover:bg-[#0077b5]/20 transition-all"
+                            title="LinkedIn">
+                            <i class="fab fa-linkedin-in"></i>
+                        </a>
+                        <a href="https://github.com/hindav" target="_blank"
+                            class="w-10 h-10 flex items-center justify-center bg-gray-900 text-white rounded-full hover:bg-gray-800 transition-all shadow-lg shadow-gray-900/20"
+                            title="GitHub">
+                            <i class="fab fa-github"></i>
+                        </a>
+                        <a href="mailto:hindav.dev@gmail.com"
+                            class="w-10 h-10 flex items-center justify-center bg-[#D44638]/10 text-[#D44638] rounded-full hover:bg-[#D44638]/20 transition-all"
+                            title="Email">
+                            <i class="fas fa-envelope"></i>
+                        </a>
+                        <a href="https://hindav.vercel.app/" target="_blank"
+                            class="w-10 h-10 flex items-center justify-center bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-100 transition-all"
+                            title="Portfolio">
+                            <i class="fas fa-globe"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center mt-12 text-gray-400 text-sm border-t pt-8">
+                <p>&copy; 2026 Hindav. All rights reserved.</p>
+            </div>
+        </footer>
+    </div> <!-- Close main container here -->
+    <script>
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const symbolInput = document.getElementById('symbolInput');
+        const openrouterKeyInput = document.getElementById('openrouterKey');
+        const newsorgKeyInput = document.getElementById('newsorgKey');
+        const resultsSection = document.getElementById('resultsSection');
+        const progressSection = document.getElementById('progressSection');
+        const suggestionsList = document.getElementById('suggestionsList');
+
+        let debounceTimer;
+
+        // Auto-complete logic
+        symbolInput.addEventListener('input', (e) => {
+            const query = e.target.value.trim();
+            clearTimeout(debounceTimer);
+
+            if (query.length < 2) {
+                suggestionsList.classList.add('hidden');
+                return;
+            }
+
+            debounceTimer = setTimeout(async () => {
+                try {
+                    const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+                    const data = await response.json();
+
+                    suggestionsList.innerHTML = '';
+                    if (data.length > 0) {
+                        suggestionsList.classList.remove('hidden');
+                        data.forEach(item => {
+                            const li = document.createElement('li');
+                            li.className = 'px-4 py-2 hover:bg-gray-100 cursor-pointer flex justify-between items-center';
+                            li.innerHTML = `
+                                <div>
+                                    <span class="font-bold text-gray-800">${item.symbol}</span>
+                                    <span class="text-sm text-gray-500 ml-2">${item.name}</span>
+                                </div>
+                                <span class="text-xs bg-gray-200 px-2 py-1 rounded text-gray-600">${item.exch}</span>
+                            `;
+                            li.addEventListener('click', () => {
+                                symbolInput.value = item.symbol;
+                                suggestionsList.classList.add('hidden');
+                            });
+                            suggestionsList.appendChild(li);
+                        });
+                    } else {
+                        suggestionsList.classList.add('hidden');
+                    }
+                } catch (error) {
+                    console.error('Search error:', error);
+                }
+            }, 300);
+        });
+
+        // Hide suggestions when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!symbolInput.contains(e.target) && !suggestionsList.contains(e.target)) {
+                suggestionsList.classList.add('hidden');
+            }
+        });
+
+        function updateStep(stepNum, status) {
+            const step = document.getElementById(`step${stepNum}`);
+            const circle = step.querySelector('div');
+            const icon = circle.querySelector('i');
+            const label = step.querySelector('span');
+
+            if (status === 'loading') {
+                circle.className = 'w-16 h-16 rounded-full bg-blue-500 flex items-center justify-center mb-2 pulse-animation';
+                icon.className = 'fas fa-spinner fa-spin text-2xl text-white';
+                label.className = 'text-sm font-medium text-blue-600';
+            } else if (status === 'completed') {
+                circle.className = 'w-16 h-16 rounded-full bg-green-500 flex items-center justify-center mb-2';
+                icon.className = 'fas fa-check text-2xl text-white';
+                label.className = 'text-sm font-medium text-green-600';
+            }
+        }
+
+        analyzeBtn.addEventListener('click', async () => {
+            const symbol = symbolInput.value.trim().toUpperCase();
+            const openrouter_key = openrouterKeyInput.value.trim();
+            const newsorg_key = newsorgKeyInput.value.trim();
+
+            if (!symbol) {
+                alert('Please enter a stock symbol');
+                return;
+            }
+
+            if (!openrouter_key || !newsorg_key) {
+                alert('Please enter both API keys to proceed with analysis.');
+                return;
+            }
+
+            // Show progress
+            progressSection.classList.remove('hidden');
+            resultsSection.classList.add('hidden');
+
+            // Re-hide progress bar initially for clean start
+            const barContainer = document.getElementById('progressBarContainer');
+            if (barContainer) {
+                barContainer.classList.add('hidden');
+                document.getElementById('progressBar').style.width = '0%';
+                document.getElementById('progressPercent').textContent = '0%';
+            }
+
+            analyzeBtn.disabled = true;
+            analyzeBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Analyzing...';
+
+            // Reset steps
+            for (let i = 1; i <= 4; i++) {
+                const step = document.getElementById(`step${i}`);
+                const circle = step.querySelector('div');
+                const icon = circle.querySelector('i');
+                const label = step.querySelector('span');
+
+                circle.className = 'w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center mb-2';
+                label.className = 'text-sm font-medium text-gray-500';
+
+                // Reset icons
+                if (i === 1) icon.className = 'fas fa-server text-2xl text-gray-400';
+                if (i === 2) icon.className = 'fas fa-brain text-2xl text-gray-400';
+                if (i === 3) icon.className = 'fas fa-newspaper text-2xl text-gray-400';
+                if (i === 4) icon.className = 'fas fa-bullseye text-2xl text-gray-400';
+            }
+
+            try {
+                const response = await fetch('/api/predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        symbol: symbol,
+                        openrouter_key: openrouter_key,
+                        newsorg_key: newsorg_key
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value, { stream: true });
+
+                    // Split by lines and process each
+                    const lines = chunk.split('\n');
+
+                    for (const line of lines) {
+                        if (!line.trim()) continue;
+
+                        // Check if line starts with "data: "
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const jsonStr = line.substring(6).trim(); // Remove "data: " prefix
+                                const data = JSON.parse(jsonStr);
+
+                                console.log('Received:', data);
+
+                                if (data.status === 'error') {
+                                    console.error('Error details:', data);
+                                    alert('Error: ' + data.message);
+                                    if (data.traceback) {
+                                        console.error('Traceback:', data.traceback);
+                                    }
+                                    break;
+                                }
+
+                                if (data.step && data.status) {
+                                    updateStep(data.step, data.status);
+
+                                    // Handle progress
+                                    if (data.progress !== undefined) {
+                                        const barContainer = document.getElementById('progressBarContainer');
+                                        const bar = document.getElementById('progressBar');
+                                        const percent = document.getElementById('progressPercent');
+                                        const msg = document.getElementById('progressMessage');
+
+                                        if (barContainer) {
+                                            barContainer.classList.remove('hidden');
+                                            bar.style.width = data.progress + '%';
+                                            percent.textContent = data.progress + '%';
+                                            if (data.message) msg.textContent = data.message;
+                                        }
+                                    }
+
+                                    if (data.results) {
+                                        setTimeout(() => displayResults(data.results), 100);
+                                    }
+                                }
+                            } catch (e) {
+                                console.error('Failed to parse JSON:', line, e);
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error: ' + error.message + '. Please check console for details.');
+            } finally {
+                analyzeBtn.disabled = false;
+                analyzeBtn.innerHTML = '<i class="fas fa-rocket mr-2"></i>Run Analysis';
+            }
+        });
+
+        function displayResults(results) {
+            resultsSection.classList.remove('hidden');
+
+            document.getElementById('symbolDisplay').textContent = results.symbol;
+            document.getElementById('currentPrice').textContent = results.current_price.toFixed(2);
+            document.getElementById('analysisTime').textContent = results.analysis_time;
+
+            // Recommendation
+            const recCard = document.getElementById('recommendationCard');
+            const recText = document.getElementById('recommendation');
+            recText.textContent = results.recommendation;
+
+            if (results.recommendation.includes('BUY')) {
+                recCard.className = 'rounded-2xl shadow-2xl p-8 mb-6 slide-up bg-green-100';
+                recText.className = 'text-5xl font-bold text-green-600';
+            } else if (results.recommendation.includes('SELL')) {
+                recCard.className = 'rounded-2xl shadow-2xl p-8 mb-6 slide-up bg-red-100';
+                recText.className = 'text-5xl font-bold text-red-600';
+            } else {
+                recCard.className = 'rounded-2xl shadow-2xl p-8 mb-6 slide-up bg-yellow-100';
+                recText.className = 'text-5xl font-bold text-yellow-600';
+            }
+
+            // Helper to update prediction cards
+            const updateCard = (prefix, data) => {
+                if (!data) return;
+
+                // Technical
+                document.getElementById(`tech${prefix}Price`).textContent = data.technical_prediction.toFixed(2);
+                document.getElementById(`tech${prefix}Change`).textContent = `${data.technical_change_pct > 0 ? '+' : ''}${data.technical_change_pct.toFixed(2)}%`;
+                document.getElementById(`tech${prefix}Change`).className = `text-xs font-medium ${data.technical_change_pct > 0 ? 'text-green-600' : 'text-red-600'}`;
+
+                // News
+                document.getElementById(`news${prefix}Price`).textContent = data.news_prediction.toFixed(2);
+                document.getElementById(`news${prefix}Change`).textContent = `${data.news_change_pct > 0 ? '+' : ''}${data.news_change_pct.toFixed(2)}%`;
+                document.getElementById(`news${prefix}Change`).className = `text-xs font-medium ${data.news_change_pct > 0 ? 'text-green-600' : 'text-red-600'}`;
+
+                // Final
+                const finalCard = document.getElementById(`final${prefix}Card`);
+                const isPositive = data.final_change_pct > 0;
+                finalCard.className = `rounded-xl p-4 ${isPositive ? 'bg-gradient-to-br from-green-50 to-emerald-50' : 'bg-gradient-to-br from-red-50 to-rose-50'}`;
+
+                document.getElementById(`final${prefix}Price`).textContent = `₹${data.final_prediction.toFixed(2)}`;
+                document.getElementById(`final${prefix}Price`).className = `text-3xl font-bold ${isPositive ? 'text-green-700' : 'text-red-700'}`;
+
+                document.getElementById(`final${prefix}Change`).innerHTML = `
+                    <i class="fas fa-${isPositive ? 'arrow-up' : 'arrow-down'} mr-1"></i>
+                    ${data.final_change_pct > 0 ? '+' : ''}${data.final_change_pct.toFixed(2)}%
+                `;
+                document.getElementById(`final${prefix}Change`).className = `text-base font-bold flex items-center mt-1 ${isPositive ? 'text-green-600' : 'text-red-600'}`;
+
+                // Confidence
+                const confBar = document.getElementById(`confidence${prefix}Bar`);
+                confBar.style.width = `${data.confidence_score}%`;
+                confBar.className = `h-1.5 rounded-full ${data.confidence_score >= 70 ? 'bg-green-500' : data.confidence_score >= 50 ? 'bg-yellow-500' : 'bg-red-500'}`;
+                document.getElementById(`confidence${prefix}`).textContent = `${data.confidence_score}%`;
+            };
+
+            // Update all cards
+            updateCard('1', results['1_day']);
+            updateCard('7', results['7_day']);
+            updateCard('30', results['30_day']);
+            updateCard('6m', results['6_month']);
+
+            // News Impact
+            const sentiment = results.news_impact.sentiment;
+            const market = results.news_impact.market;
+            const events = results.news_impact.events;
+
+            document.getElementById('sentimentImpact').textContent = `${sentiment > 0 ? '+' : ''}${sentiment.toFixed(2)}%`;
+            document.getElementById('sentimentImpact').className = `font-bold ${sentiment > 0 ? 'text-green-600' : 'text-red-600'}`;
+            document.getElementById('sentimentBar').style.width = `${Math.min(Math.abs(sentiment) * 10, 100)}%`;
+
+            document.getElementById('marketImpact').textContent = `${market > 0 ? '+' : ''}${market.toFixed(2)}%`;
+            document.getElementById('marketImpact').className = `font-bold ${market > 0 ? 'text-green-600' : 'text-red-600'}`;
+            document.getElementById('marketBar').style.width = `${Math.min(Math.abs(market) * 10, 100)}%`;
+
+            document.getElementById('eventsImpact').textContent = `${events > 0 ? '+' : ''}${events.toFixed(2)}%`;
+            document.getElementById('eventsImpact').className = `font-bold ${events > 0 ? 'text-green-600' : 'text-red-600'}`;
+            document.getElementById('eventsBar').style.width = `${Math.min(Math.abs(events) * 10, 100)}%`;
+        }
+    </script>
+</body>
+
+</html>

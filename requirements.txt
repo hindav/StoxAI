@@ -1,0 +1,13 @@
+flask
+flask-cors
+streamlit
+requests
+pandas
+numpy
+plotly
+python-dotenv
+scikit-learn
+tensorflow
+uvicorn
+fastapi
+pydantic
