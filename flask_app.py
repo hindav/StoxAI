@@ -402,4 +402,5 @@ if __name__ == '__main__':
     print("\nStarting server at http://localhost:5000")
     print("Open your browser and navigate to the URL above\n")
     
-    app.run(debug=False, host='0.0.0.0', port=5000, threaded=True)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(debug=False, host='0.0.0.0', port=port, threaded=True)
