@@ -57,23 +57,42 @@ class PredictionEngine:
         if not api_running:
             try:
                 # Start API using uvicorn as a module
+                # In deployment, we need to be careful with paths and environments
+                print("Attempting to start internal API server...")
                 api_process = subprocess.Popen(
                     [sys.executable, "-m", "uvicorn", "Api.api:app", "--host", "127.0.0.1", "--port", "8000"],
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
                     cwd=os.getcwd() # Ensure we run from the project root
                 )
                 
-                for i in range(10):
+                # Check for immediate failure
+                try:
+                    outs, errs = api_process.communicate(timeout=0.5)
+                    if api_process.returncode is not None and api_process.returncode != 0:
+                        print(f"API failed to start immediately. Error: {errs.decode('utf-8')}")
+                        return False
+                except subprocess.TimeoutExpired:
+                    # This is good, it means it's running
+                    pass
+
+                for i in range(15):
                     time.sleep(1)
                     try:
                         resp = requests.get(f"{self.api_url}/", timeout=1)
                         if resp.status_code == 200:
                             api_running = True
+                            print("Internal API server started successfully.")
                             return True
                     except:
+                        if api_process.poll() is not None:
+                            # Process died
+                            _, errs = api_process.communicate()
+                            print(f"API process died during startup. Error: {errs.decode('utf-8')}")
+                            return False
                         continue
-            except:
+            except Exception as e:
+                print(f"Exception starting API: {e}")
                 pass
         
         return api_running
