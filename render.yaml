@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: stoxai-api
+    env: python
+    region: ohio # Close to US
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python flask_app.py
+    autoDeploy: true
+    envVars:
+      - key: PORT
+        value: 10000
